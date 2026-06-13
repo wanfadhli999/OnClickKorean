@@ -111,9 +111,9 @@
     💡 Lihat perkataan di atas, kemudian tekan butang mikrofon dan sebut dengan lantang!
   </div>
 
-  <div class="word-box" id="targetWord">눈</div>
-  <div class="meaning" id="meaning">Mata</div>
-  <div class="progress" id="progress">Perkataan 1 / 7</div>
+  <div class="word-box" id="targetWord"></div>
+  <div class="meaning" id="meaning"></div>
+  <div class="progress" id="progress"></div>
   
   <div class="btn-row">
     <button id="micBtn">🎤 Tekan & Sebut</button>
@@ -142,7 +142,10 @@
     "🏆 Setiap percubaan membawa anda selangkah lebih dekat kejayaan!"
   ];
 
-  let currentIndex = 0;
+  // Read ?word=N from the URL, default to 0
+  const params = new URLSearchParams(window.location.search);
+  let currentIndex = parseInt(params.get('word')) || 0;
+  if (currentIndex < 0 || currentIndex >= words.length) currentIndex = 0;
 
   const statusDiv = document.getElementById('status');
   const micBtn = document.getElementById('micBtn');
@@ -160,6 +163,8 @@
     statusDiv.innerText = "Sedia untuk mendengar...";
     statusDiv.className = "";
   }
+
+  loadWord(currentIndex);
 
   nextBtn.addEventListener('click', () => {
     currentIndex = (currentIndex + 1) % words.length;
