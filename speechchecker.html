@@ -31,7 +31,18 @@
   .meaning {
     font-size: 18px;
     color: #666;
-    margin-bottom: 30px;
+    margin-bottom: 10px;
+  }
+  .progress {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 20px;
+  }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 10px;
   }
   button { 
     background-color: #1a73e8; 
@@ -48,6 +59,16 @@
   button:hover { 
     background-color: #1557b0; 
     transform: translateY(-2px);
+  }
+  #nextBtn {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    box-shadow: none;
+    font-size: 15px;
+    padding: 15px 20px;
+  }
+  #nextBtn:hover {
+    background-color: #d2e3fc;
   }
   #status { 
     margin-top: 25px; 
@@ -67,27 +88,56 @@
 </style>
 </head>
 <body>
-
 <div class="card">
   <h3>Uji Sebutan Anda</h3>
   <div class="word-box" id="targetWord">눈</div>
-  <div class="meaning">Mata</div>
+  <div class="meaning" id="meaning">Mata</div>
+  <div class="progress" id="progress">Perkataan 1 / 7</div>
   
-  <button id="micBtn">🎤 Tekan & Sebut</button>
+  <div class="btn-row">
+    <button id="micBtn">🎤 Tekan & Sebut</button>
+    <button id="nextBtn">Seterusnya ▶</button>
+  </div>
   <div id="status">Sedia untuk mendengar...</div>
 </div>
-
 <script>
-  // Memanggil AI Pengecaman Suara bawaan pelayar web (Chrome/Edge/Safari)
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  
+  const words = [
+    { korean: "눈", malay: "Mata" },
+    { korean: "입", malay: "Mulut" },
+    { korean: "머리", malay: "Kepala" },
+    { korean: "손가락", malay: "Jari" },
+    { korean: "발", malay: "Kaki (bawah)" },
+    { korean: "다리", malay: "Kaki (betis)" },
+    { korean: "허벅지", malay: "Peha" }
+  ];
+
+  let currentIndex = 0;
+
   const statusDiv = document.getElementById('status');
   const micBtn = document.getElementById('micBtn');
-  const targetWord = document.getElementById('targetWord').innerText.trim();
+  const nextBtn = document.getElementById('nextBtn');
+  const wordBox = document.getElementById('targetWord');
+  const meaningDiv = document.getElementById('meaning');
+  const progressDiv = document.getElementById('progress');
+
+  function loadWord(index) {
+    wordBox.innerText = words[index].korean;
+    meaningDiv.innerText = words[index].malay;
+    progressDiv.innerText = `Perkataan ${index + 1} / ${words.length}`;
+    statusDiv.innerText = "Sedia untuk mendengar...";
+    statusDiv.className = "";
+  }
+
+  nextBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex + 1) % words.length;
+    loadWord(currentIndex);
+  });
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
-    recognition.lang = 'ko-KR'; // AI disetkan untuk mengesan Bahasa Korea sahaja
+    recognition.lang = 'ko-KR';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -96,16 +146,13 @@
         recognition.start();
         statusDiv.innerText = "Mendengar... Sila sebut sekarang!";
         statusDiv.className = "listening";
-      } catch (e) {
-        // Abaikan jika sudah ditekan
-      }
+      } catch (e) {}
     });
 
-    // Apabila AI mendapat hasil tangkapan suara
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript.trim(); // Perkataan yang ditangkap
-      
-      // Semak jika sebutan pelajar sama dengan perkataan di skrin
+      const transcript = event.results[0][0].transcript.trim();
+      const targetWord = wordBox.innerText.trim(); // fix: reads current word at time of result
+
       if (transcript === targetWord) {
         statusDiv.innerText = `Tepat sekali! Anda menyebut: "${transcript}" 🎉`;
         statusDiv.className = "success";
@@ -115,30 +162,27 @@
       }
     };
 
-    // Jika tiada suara dikesan atau mikrofon disekat
     recognition.onerror = (event) => {
-      if(event.error === 'not-allowed') {
-         statusDiv.innerText = "Sila benarkan akses mikrofon pada pelayar web.";
+      if (event.error === 'not-allowed') {
+        statusDiv.innerText = "Sila benarkan akses mikrofon pada pelayar web.";
       } else {
-         statusDiv.innerText = "Suara tidak jelas. Sila cuba lagi.";
+        statusDiv.innerText = "Suara tidak jelas. Sila cuba lagi.";
       }
       statusDiv.className = "error";
     };
-    
+
     recognition.onend = () => {
-        if(statusDiv.className === "listening") {
-            statusDiv.innerText = "Sedia untuk mendengar...";
-            statusDiv.className = "";
-        }
+      if (statusDiv.className === "listening") {
+        statusDiv.innerText = "Sedia untuk mendengar...";
+        statusDiv.className = "";
+      }
     };
 
   } else {
-    // Jika pelajar guna pelayar web lama yang tiada AI suara
     statusDiv.innerText = "Maaf, peranti/pelayar web anda tidak menyokong fungsi mikrofon.";
     statusDiv.className = "error";
     micBtn.style.display = "none";
   }
 </script>
-
 </body>
 </html>
