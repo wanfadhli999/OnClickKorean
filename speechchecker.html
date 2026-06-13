@@ -21,7 +21,13 @@
     max-width: 350px; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
   }
-  h3 { color: #555; margin-top: 0; }
+  .tagline {
+    font-size: 13px;
+    color: #888;
+    margin: -5px 0 15px;
+    font-style: italic;
+  }
+  h3 { color: #555; margin-top: 0; margin-bottom: 4px; }
   .word-box { 
     font-size: 60px; 
     color: #1a73e8; 
@@ -37,6 +43,15 @@
     font-size: 13px;
     color: #999;
     margin-bottom: 20px;
+  }
+  .encourage-box {
+    background-color: #e8f0fe;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #1a73e8;
+    margin-bottom: 18px;
+    line-height: 1.5;
   }
   .btn-row {
     display: flex;
@@ -89,7 +104,13 @@
 </head>
 <body>
 <div class="card">
-  <h3>Uji Sebutan Anda</h3>
+  <h3>🇰🇷 Uji Sebutan Anda</h3>
+  <p class="tagline">Berani cuba, pasti boleh!</p>
+
+  <div class="encourage-box" id="encourageBox">
+    💡 Lihat perkataan di atas, kemudian tekan butang mikrofon dan sebut dengan lantang!
+  </div>
+
   <div class="word-box" id="targetWord">눈</div>
   <div class="meaning" id="meaning">Mata</div>
   <div class="progress" id="progress">Perkataan 1 / 7</div>
@@ -111,6 +132,16 @@
     { korean: "허벅지", malay: "Peha" }
   ];
 
+  const encouragements = [
+    "💡 Lihat perkataan di atas, kemudian tekan butang mikrofon dan sebut dengan lantang!",
+    "🌟 Jangan malu! Sebutan yang baik bermula dengan keberanian mencuba.",
+    "💪 Teruskan! Semakin kerap berlatih, semakin fasih sebutan anda.",
+    "😊 Anda hampir berjaya! Cuba sekali lagi dengan yakin.",
+    "🎯 Fokus dan sebut perlahan-lahan. Anda pasti boleh!",
+    "🚀 Hebat! Teruskan semangat belajar bahasa Korea anda.",
+    "🏆 Setiap percubaan membawa anda selangkah lebih dekat kejayaan!"
+  ];
+
   let currentIndex = 0;
 
   const statusDiv = document.getElementById('status');
@@ -119,11 +150,13 @@
   const wordBox = document.getElementById('targetWord');
   const meaningDiv = document.getElementById('meaning');
   const progressDiv = document.getElementById('progress');
+  const encourageBox = document.getElementById('encourageBox');
 
   function loadWord(index) {
     wordBox.innerText = words[index].korean;
     meaningDiv.innerText = words[index].malay;
     progressDiv.innerText = `Perkataan ${index + 1} / ${words.length}`;
+    encourageBox.innerText = encouragements[index];
     statusDiv.innerText = "Sedia untuk mendengar...";
     statusDiv.className = "";
   }
@@ -151,22 +184,26 @@
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript.trim();
-      const targetWord = wordBox.innerText.trim(); // fix: reads current word at time of result
+      const targetWord = wordBox.innerText.trim();
 
       if (transcript === targetWord) {
         statusDiv.innerText = `Tepat sekali! Anda menyebut: "${transcript}" 🎉`;
         statusDiv.className = "success";
+        encourageBox.innerText = "🎉 Luar biasa! Sebutan anda sangat tepat. Tekan 'Seterusnya' untuk perkataan baru!";
       } else {
         statusDiv.innerText = `Kurang tepat. Sistem dengar: "${transcript}". Cuba lagi!`;
         statusDiv.className = "error";
+        encourageBox.innerText = "😊 Jangan putus asa! Cuba sebut sekali lagi dengan lebih perlahan dan jelas.";
       }
     };
 
     recognition.onerror = (event) => {
       if (event.error === 'not-allowed') {
         statusDiv.innerText = "Sila benarkan akses mikrofon pada pelayar web.";
+        encourageBox.innerText = "⚙️ Pergi ke tetapan pelayar web anda dan benarkan akses mikrofon untuk meneruskan latihan.";
       } else {
         statusDiv.innerText = "Suara tidak jelas. Sila cuba lagi.";
+        encourageBox.innerText = "🎙️ Pastikan anda bercakap dengan jelas dan tidak terlalu jauh dari mikrofon.";
       }
       statusDiv.className = "error";
     };
@@ -182,6 +219,7 @@
     statusDiv.innerText = "Maaf, peranti/pelayar web anda tidak menyokong fungsi mikrofon.";
     statusDiv.className = "error";
     micBtn.style.display = "none";
+    encourageBox.innerText = "⚠️ Sila gunakan pelayar web Google Chrome atau Microsoft Edge untuk menggunakan fungsi ini.";
   }
 </script>
 </body>
