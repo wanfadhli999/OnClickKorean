@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latihan Sebutan Korea</title>
+<style>
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    display: flex; 
+    justify-content: center; 
+    padding: 20px; 
+    background-color: #ffffff;
+  }
+  .card { 
+    border: 2px solid #1a73e8; 
+    border-radius: 16px; 
+    padding: 30px; 
+    text-align: center; 
+    width: 100%; 
+    max-width: 350px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+  }
+  h3 { color: #555; margin-top: 0; }
+  .word-box { 
+    font-size: 60px; 
+    color: #1a73e8; 
+    font-weight: bold; 
+    margin: 20px 0; 
+  }
+  .meaning {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 30px;
+  }
+  button { 
+    background-color: #1a73e8; 
+    color: white; 
+    border: none; 
+    padding: 15px 25px; 
+    font-size: 18px; 
+    font-weight: bold;
+    border-radius: 50px; 
+    cursor: pointer; 
+    transition: 0.3s;
+    box-shadow: 0 4px 6px rgba(26, 115, 232, 0.3);
+  }
+  button:hover { 
+    background-color: #1557b0; 
+    transform: translateY(-2px);
+  }
+  #status { 
+    margin-top: 25px; 
+    font-size: 16px; 
+    font-weight: bold;
+    min-height: 24px;
+  }
+  .success { color: #137333; }
+  .error { color: #c5221f; }
+  .listening { color: #f29900; animation: pulse 1.5s infinite; }
+  
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h3>Uji Sebutan Anda</h3>
+  <div class="word-box" id="targetWord">눈</div>
+  <div class="meaning">Mata</div>
+  
+  <button id="micBtn">🎤 Tekan & Sebut</button>
+  <div id="status">Sedia untuk mendengar...</div>
+</div>
+
+<script>
+  // Memanggil AI Pengecaman Suara bawaan pelayar web (Chrome/Edge/Safari)
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  
+  const statusDiv = document.getElementById('status');
+  const micBtn = document.getElementById('micBtn');
+  const targetWord = document.getElementById('targetWord').innerText.trim();
+
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR'; // AI disetkan untuk mengesan Bahasa Korea sahaja
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    micBtn.addEventListener('click', () => {
+      try {
+        recognition.start();
+        statusDiv.innerText = "Mendengar... Sila sebut sekarang!";
+        statusDiv.className = "listening";
+      } catch (e) {
+        // Abaikan jika sudah ditekan
+      }
+    });
+
+    // Apabila AI mendapat hasil tangkapan suara
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.trim(); // Perkataan yang ditangkap
+      
+      // Semak jika sebutan pelajar sama dengan perkataan di skrin
+      if (transcript === targetWord) {
+        statusDiv.innerText = `Tepat sekali! Anda menyebut: "${transcript}" 🎉`;
+        statusDiv.className = "success";
+      } else {
+        statusDiv.innerText = `Kurang tepat. Sistem dengar: "${transcript}". Cuba lagi!`;
+        statusDiv.className = "error";
+      }
+    };
+
+    // Jika tiada suara dikesan atau mikrofon disekat
+    recognition.onerror = (event) => {
+      if(event.error === 'not-allowed') {
+         statusDiv.innerText = "Sila benarkan akses mikrofon pada pelayar web.";
+      } else {
+         statusDiv.innerText = "Suara tidak jelas. Sila cuba lagi.";
+      }
+      statusDiv.className = "error";
+    };
+    
+    recognition.onend = () => {
+        if(statusDiv.className === "listening") {
+            statusDiv.innerText = "Sedia untuk mendengar...";
+            statusDiv.className = "";
+        }
+    };
+
+  } else {
+    // Jika pelajar guna pelayar web lama yang tiada AI suara
+    statusDiv.innerText = "Maaf, peranti/pelayar web anda tidak menyokong fungsi mikrofon.";
+    statusDiv.className = "error";
+    micBtn.style.display = "none";
+  }
+</script>
+
+</body>
+</html>
