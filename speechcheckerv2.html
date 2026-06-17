@@ -281,7 +281,7 @@ function renderItem() {
   badgeEl.className = 'badge' + (item.type === 'sentence' ? ' sentence' : '');
   malayPromptEl.textContent = item.malay;
   instructionEl.textContent = item.type === 'word'
-    ? 'Sebut perkataan ini dalam Bahasa Korea'
+    ? 'Sebut perkataan ini dalam Bahasa Korea — sebut dengan jelas & sedikit perlahan'
     : 'Sebut ayat ini dalam Bahasa Korea (guna partikel 로/으로 yang betul)';
   statusEl.textContent = 'Sedia untuk mendengar...';
   heardBoxEl.innerHTML = '';
@@ -318,27 +318,69 @@ function playTone(freqs, type, duration) {
 function playSuccess() { playTone([880, 1175, 1568], 'sine', 0.13); }
 function playFail() { playTone([240, 180], 'sawtooth', 0.18); }
 
-// ---------- Matching logic (lenient) ----------
+// ---------- Matching logic (lenient, jamo-aware) ----------
+// Plain character-level comparison gives zero partial credit on short
+// 1-syllable words (귀/손/코): any near-miss from the recognizer scores
+// as 100% wrong. We decompose into Hangul jamo (initial/medial/final)
+// so a single mismatched consonant/vowel only costs a fraction of the
+// score instead of the whole word.
 function normalize(s) {
   return s.normalize('NFC').toLowerCase().replace(/[\s.,!?~"'`·]/g, '');
 }
-function levenshtein(a, b) {
+
+const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+const JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+// Consonants that are easy to mix up acoustically (plain/tense/aspirated
+// versions of the same base sound) get a smaller substitution cost.
+const SOFT_GROUPS = [
+  ['ㄱ','ㄲ','ㅋ'], ['ㄷ','ㄸ','ㅌ'], ['ㅂ','ㅃ','ㅍ'], ['ㅈ','ㅉ','ㅊ'], ['ㅅ','ㅆ'],
+];
+function decomposeHangul(str) {
+  const tokens = [];
+  for (const ch of str) {
+    const code = ch.codePointAt(0);
+    if (code >= 0xAC00 && code <= 0xD7A3) {
+      const offset = code - 0xAC00;
+      tokens.push(CHO[Math.floor(offset / 588)]);
+      tokens.push(JUNG[Math.floor((offset % 588) / 28)]);
+      const jong = offset % 28;
+      if (jong > 0) tokens.push(JONG[jong]);
+    } else {
+      tokens.push(ch);
+    }
+  }
+  return tokens;
+}
+function subCost(a, b) {
+  if (a === b) return 0;
+  for (const g of SOFT_GROUPS) {
+    if (g.includes(a) && g.includes(b)) return 0.4;
+  }
+  return 1;
+}
+function weightedLevenshtein(a, b) {
   const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
   for (let i = 0; i <= a.length; i++) dp[i][0] = i;
   for (let j = 0; j <= b.length; j++) dp[0][j] = j;
   for (let i = 1; i <= a.length; i++) {
     for (let j = 1; j <= b.length; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + subCost(a[i - 1], b[j - 1])
+      );
     }
   }
   return dp[a.length][b.length];
 }
-function similarity(a, b) {
-  if (!a.length && !b.length) return 1;
-  const dist = levenshtein(a, b);
-  return 1 - dist / Math.max(a.length, b.length);
+function jamoSimilarity(a, b) {
+  const ja = decomposeHangul(a);
+  const jb = decomposeHangul(b);
+  if (!ja.length && !jb.length) return 1;
+  if (!ja.length || !jb.length) return 0;
+  const dist = weightedLevenshtein(ja, jb);
+  return 1 - dist / Math.max(ja.length, jb.length);
 }
 function isMatch(transcript, expected) {
   const a = normalize(transcript);
@@ -346,7 +388,7 @@ function isMatch(transcript, expected) {
   if (!a) return false;
   if (a === b) return true;
   if (a.includes(b) || b.includes(a)) return true;
-  return similarity(a, b) >= 0.65; // lenient threshold
+  return jamoSimilarity(a, b) >= 0.6; // lenient threshold, jamo-level
 }
 
 // ---------- Speech recognition ----------
